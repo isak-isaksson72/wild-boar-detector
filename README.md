@@ -1,1 +1,1 @@
-# wild-bore-detector
+# wild-boar-detector
