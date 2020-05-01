@@ -3,6 +3,7 @@ import json
 from tkinter import filedialog
 from tkinter import *  
 from PIL import ImageTk,Image  
+import csv
 
 class Object():
     def __init__(self):
@@ -22,6 +23,7 @@ class Window():
         filemenu.add_command(label="Open Project", command=self.open_project)
         filemenu.add_command(label="Save", command=self.save_project)
         filemenu.add_command(label="Export To CSV", command=self.export_to_csv)
+        filemenu.add_command(label="Import From CSV", command=self.import_from_csv)
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=root.quit)
         menubar.add_cascade(label="File", menu=filemenu)
@@ -41,6 +43,7 @@ class Window():
         Radiobutton(class_group, text="Pig", variable=self.object_type, value='Pig', command=self.select_label).pack(anchor = W )
         Radiobutton(class_group, text="Fox", variable=self.object_type, value='Fox', command=self.select_label).pack(anchor = W )
         Radiobutton(class_group, text="Deer", variable=self.object_type, value='Deer', command=self.select_label).pack(anchor = W )
+        Radiobutton(class_group, text="Moose", variable=self.object_type, value='Deer', command=self.select_label).pack(anchor = W )
         
         self.image_names = Listbox(content, borderwidth=2, relief="groove")
         self.image_names.bind('<<ListboxSelect>>', self.select_image)
@@ -82,8 +85,8 @@ class Window():
         image_name = self.image_names.get(ANCHOR)
         image_path = os.path.join(self.data_folder, image_name)
         self.current_object_selected = None
-        
-        if os.path.exists(image_path):
+        exists = os.path.exists(image_path)
+        if exists:
             self.canvas.delete('all')
             raw = Image.open(image_path)
             self.data[image_name]['x_scale'] = raw.size[0] / 960
@@ -129,15 +132,38 @@ class Window():
         if self.project_file is None:
             return
         f = filedialog.asksaveasfile(mode='w', defaultextension=".csv")
+        
         if f is None: # asksaveasfile return `None` if dialog closed with "cancel".
                 return
-        csv = ''
+        csv_data = ''
         for image_name in self.data:            
             for o in self.data[image_name]['objects']:
                 x_scale = self.data[image_name]['x_scale']
                 y_scale = self.data[image_name]['y_scale']
-                csv += f'{image_name},{int(o.x_min * x_scale)},{int(o.y_min * y_scale)},{int(o.x_max * x_scale)},{int(o.y_max * y_scale)},{o.object_type}\n'
-        f.write(csv)
+                csv_data += f'{image_name},{int(o.x_min * x_scale)},{int(o.y_min * y_scale)},{int(o.x_max * x_scale)},{int(o.y_max * y_scale)},{o.object_type}\n'
+        f.write(csv_data)
+        f.close()
+
+    def import_from_csv(self):        
+        f = filedialog.askopenfile(mode='r', filetypes =[('Project Files', '*.csv')])
+        if f is None: # asksaveasfile return `None` if dialog closed with "cancel".
+            return
+        self.data_folder = os.path.dirname(f.name)
+        csv_reader = csv.reader(f, delimiter=',')
+        i = len(self.image_names.keys())
+        for row in csv_reader:
+            image_name = row[0]
+            if image_name not in self.data:
+                self.data[image_name] = {'name': image_name, 'objects': [] }
+                self.image_names.insert(i, image_name)
+                i += 1
+            o = Object()
+            o.x_min = row[1]            
+            o.y_min = row[2]
+            o.x_max = row[3]
+            o.y_max = row[4]
+            o.object_type = row[5]
+            self.data[image_name]['objects'].append(o)
         f.close()
 
     def save_project(self):
