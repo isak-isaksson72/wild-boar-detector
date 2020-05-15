@@ -43,7 +43,7 @@ class Window():
         Radiobutton(class_group, text="Pig", variable=self.object_type, value='Pig', command=self.select_label).pack(anchor = W )
         Radiobutton(class_group, text="Fox", variable=self.object_type, value='Fox', command=self.select_label).pack(anchor = W )
         Radiobutton(class_group, text="Deer", variable=self.object_type, value='Deer', command=self.select_label).pack(anchor = W )
-        Radiobutton(class_group, text="Moose", variable=self.object_type, value='Deer', command=self.select_label).pack(anchor = W )
+        Radiobutton(class_group, text="Moose", variable=self.object_type, value='Moose', command=self.select_label).pack(anchor = W )
         
         self.image_names = Listbox(content, borderwidth=2, relief="groove")
         self.image_names.bind('<<ListboxSelect>>', self.select_image)
@@ -157,11 +157,15 @@ class Window():
                 self.data[image_name] = {'name': image_name, 'objects': [] }
                 self.image_names.insert(i, image_name)
                 i += 1
+                image_path = os.path.join(self.data_folder, image_name)
+                raw = Image.open(image_path)
+                self.data[image_name]['x_scale'] = raw.size[0] / 960
+                self.data[image_name]['y_scale'] = raw.size[1] / 720  
             o = Object()
-            o.x_min = row[1]            
-            o.y_min = row[2]
-            o.x_max = row[3]
-            o.y_max = row[4]
+            o.x_min = int(row[1]) // self.data[image_name]['x_scale']           
+            o.y_min = int(row[2]) // self.data[image_name]['y_scale']
+            o.x_max = int(row[3]) // self.data[image_name]['x_scale']
+            o.y_max = int(row[4]) // self.data[image_name]['y_scale']
             o.object_type = row[5]
             self.data[image_name]['objects'].append(o)
         f.close()
@@ -242,6 +246,7 @@ class Window():
         for o in self.data[self.current_image]['objects']:
             if selected_object == i:
                 self.canvas.create_rectangle(o.x_min, o.y_min, o.x_max, o.y_max, outline="red", width=2)
+                self.object_type.set(o.object_type)
             else:
                 self.canvas.create_rectangle(o.x_min, o.y_min, o.x_max, o.y_max, outline="white", dash=(1, 1), width=2)
             i += 1
