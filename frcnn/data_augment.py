@@ -88,7 +88,8 @@ def augment_generated_training_set(img_data, config):
 	img_data_aug['bboxes'][0]['x1'] = pos[0]
 	img_data_aug['bboxes'][0]['y1'] = pos[1]
 	img_data_aug['bboxes'][0]['x2'] = pos[0] + cols
-	img_data_aug['bboxes'][0]['y2'] = pos[1] + rows		
+	img_data_aug['bboxes'][0]['y2'] = pos[1] + rows	
+	img_aug = np.repeat(img_aug, 3, 2)	
 	return img_data_aug, img_aug
 
 def augment_validation_set(img_data, config):
@@ -112,6 +113,7 @@ def augment_validation_set(img_data, config):
 				bbox['x2'] = cols - x1
 				bbox['x1'] = cols - x2
 	img_aug = np.expand_dims(img_aug, -1)
+	img_aug = np.repeat(img_aug, 3, 2)
 	return img_data_aug, img_aug
 
 '''
@@ -122,7 +124,7 @@ i = 0
 while(c != 27):
 	files_path = files[np.random.randint(0,len(files))]
 	img_data = {'filepath':files_path, 'bboxes':[{}] }
-	img_data_aug, img_aug = augment_validation_set(img_data, None)
+	img_data_aug, img_aug = augment_generated_training_set(img_data, None)
 	print(f'Shape: {img_aug.shape}')
 	#start_point = (img_data_aug['bboxes'][0]['x1'], img_data_aug['bboxes'][0]['y1'])
 	#end_point = (img_data_aug['bboxes'][0]['x2'], img_data_aug['bboxes'][0]['y2'])
