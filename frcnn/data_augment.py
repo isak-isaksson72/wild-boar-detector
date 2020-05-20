@@ -77,7 +77,7 @@ def augment_generated_training_set(img_data, config):
 		fg = cv2.add(fg,level)
 		img_aug[:,:,0] = fg
 	# Add background noise
-	bg = np.random.randint(0, 256, (600,600,1))# (rows * 2, cols * 2, 1)) 
+	bg = np.random.randint(0, 256, (rows * 2, cols * 2, 1)) 
 	pos = (np.random.randint(0, bg.shape[1] - cols), np.random.randint(0, bg.shape[0] - rows))
 	
 	img_aug = overlay_image_alpha(bg, img_aug[:,:,:1], pos, img_aug[:,:,1:2] // 255)
@@ -94,8 +94,8 @@ def augment_generated_training_set(img_data, config):
 def augment_validation_set(img_data, config):
 	assert 'filepath' in img_data
 	assert 'bboxes' in img_data
-	assert 'width' in img_data
-	assert 'height' in img_data
+	#assert 'width' in img_data
+	#assert 'height' in img_data
 	img_data_aug = copy.deepcopy(img_data)
 
 	img = cv2.imread(img_data_aug['filepath'], cv2.IMREAD_UNCHANGED)
@@ -104,31 +104,29 @@ def augment_validation_set(img_data, config):
 	img_aug = cv2.medianBlur(img_gray, 1)
 	
 	# Mirror image
-	if np.random.randint(0, 2) == 0:
+	if np.random.randint(0, 2) == 3:
 		img_aug = cv2.flip(img_aug, 1)
 		for bbox in img_data_aug['bboxes']:
 				x1 = bbox['x1']
 				x2 = bbox['x2']
 				bbox['x2'] = cols - x1
 				bbox['x1'] = cols - x2
-
+	img_aug = np.expand_dims(img_aug, -1)
 	return img_data_aug, img_aug
 
-
-"""c = None
+'''
+c = None
 import glob
 files = glob.glob('C:/Scania/wild-boar-detector/data/generated_training/*.png')
 i = 0
 while(c != 27):
 	files_path = files[np.random.randint(0,len(files))]
 	img_data = {'filepath':files_path, 'bboxes':[{}] }
-	img_data_aug, img_aug = augment_generated_training_set(img_data, None)
-	start_point = (img_data_aug['bboxes'][0]['x1'], img_data_aug['bboxes'][0]['y1'])
-	end_point = (img_data_aug['bboxes'][0]['x2'], img_data_aug['bboxes'][0]['y2'])
-	img_aug = cv2.rectangle(img_aug,start_point, end_point, 255, 2) 
-	filename = f'C:/Scania/test{i}.jpg'
-	i += 1
-	cv2.imwrite(filename, img_aug) 
+	img_data_aug, img_aug = augment_validation_set(img_data, None)
+	print(f'Shape: {img_aug.shape}')
+	#start_point = (img_data_aug['bboxes'][0]['x1'], img_data_aug['bboxes'][0]['y1'])
+	#end_point = (img_data_aug['bboxes'][0]['x2'], img_data_aug['bboxes'][0]['y2'])
+	#img_aug = cv2.rectangle(img_aug,start_point, end_point, 255, 2) 
 	try:
 		cv2.imshow('Window', img_aug)
 		print(img_data_aug)
@@ -137,4 +135,4 @@ while(c != 27):
 		print(e)
 		pass
 cv2.destroyAllWindows()
-"""
+'''
