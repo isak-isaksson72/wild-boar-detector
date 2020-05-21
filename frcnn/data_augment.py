@@ -77,11 +77,15 @@ def augment_generated_training_set(img_data, config):
 		fg = cv2.add(fg,level)
 		img_aug[:,:,0] = fg
 	# Add background noise
-	bg = np.random.randint(0, 256, (rows * 2, cols * 2, 1)) 
+	#bg = np.random.randint(0, 256, (rows * 2, cols * 2, 1)) 
+	bg = cv2.imread('/content/wild-boar-detector/data/bg.jpg', cv2.IMREAD_UNCHANGED)
+	bg = cv2.cvtColor(bg, cv2.COLOR_BGR2GRAY)
+	bg = cv2.medianBlur(bg, 1)
+	bg = np.expand_dims(bg, -1)	
 	pos = (np.random.randint(0, bg.shape[1] - cols), np.random.randint(0, bg.shape[0] - rows))
 	
 	img_aug = overlay_image_alpha(bg, img_aug[:,:,:1], pos, img_aug[:,:,1:2] // 255)
-
+	
 	
 	img_data_aug['height'] = bg.shape[0]
 	img_data_aug['width'] = bg.shape[1]	
@@ -116,10 +120,10 @@ def augment_validation_set(img_data, config):
 	img_aug = np.repeat(img_aug, 3, 2)
 	return img_data_aug, img_aug
 
-'''
-c = None
+
+'''c = None
 import glob
-files = glob.glob('C:/Scania/wild-boar-detector/data/generated_training/*.png')
+files = glob.glob('C:/git/wild-boar-detector/data/generated_training/*.png')
 i = 0
 while(c != 27):
 	files_path = files[np.random.randint(0,len(files))]
