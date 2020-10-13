@@ -173,9 +173,9 @@ if __name__ == "__main__":
 			#color = (np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255))
 			#img_aug = cv2.rectangle(img_aug,start_point, end_point, color, 2)
 		try:
-			#cv2.imshow('Window', img_aug)
+			cv2.imshow('Window', img_aug)
 			#print(img_data_aug)
-			#c = cv2.waitKey()	
+			c = cv2.waitKey()	
 			cv2.imwrite(img_file_name,img_aug)
 			i += 1
 		except Exception as e:
@@ -183,4 +183,4 @@ if __name__ == "__main__":
 			pass
 	with open('generated.txt','w') as f:
   		f.write('\n'.join(objects))
-	#cv2.destroyAllWindows()
+	cv2.destroyAllWindows()
