@@ -3,13 +3,6 @@ import numpy as np
 import copy
 
 def overlay_image_alpha(img, img_overlay, pos, alpha_mask):
-    """Overlay img_overlay on top of img at the position specified by
-    pos and blend using alpha_mask.
-
-    Alpha mask must contain values within the range [0, 1] and be the
-    same size as img_overlay.
-    """
-
     x, y = pos
 
     # Image ranges
@@ -33,67 +26,107 @@ def overlay_image_alpha(img, img_overlay, pos, alpha_mask):
     img = np.array(img, dtype=np.uint8)
     return img
 
-def augment_generated_training_set(img_data, config):
-	assert 'filepath' in img_data	
-
-	img_data_aug = copy.deepcopy(img_data)
-
-	img = cv2.imread(img_data_aug['filepath'], cv2.IMREAD_UNCHANGED)
+def load_image(file_path):
+	img = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
 	rows, cols = img.shape[:2]
 	alpha = img[:,:,3]
 	img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	
-	img_aug = np.zeros((rows, cols, 2), dtype=np.uint8)
-	img_aug[:,:,0] = img_gray
-	img_aug[:,:,1] = alpha
+	img_orig = np.zeros((rows, cols, 2), dtype=np.uint8)
+	img_orig[:,:,0] = img_gray
+	img_orig[:,:,1] = alpha
+	return img_orig
 
+def augment_image(img_orig, scale):
+
+	img_aug = img_orig
+	
 	#adjust size
-	if np.random.randint(0, 2) == 0:
-		scale_percent = np.random.randint(50, 101)
-		height = int(img_aug.shape[0] * scale_percent / 100)
-		width = int(img_aug.shape[1] * scale_percent / 100)		
-		dim = (width, height)
-		img_aug = cv2.resize(img_aug, dim, interpolation = cv2.INTER_AREA)
-		rows, cols = height, width
-
-	# crop image
-	if np.random.randint(0, 4) == 0:
-		x_crop_w = np.random.randint(cols * 1.5 // 2, cols + 1)
-		y_crop_h = np.random.randint(rows * 1.5 // 2, rows + 1)
-		x_start = 0 if np.random.randint(0, 2) == 0 else cols - x_crop_w
-		y_start = 0 if np.random.randint(0, 2) == 0 else  rows - y_crop_h
-		img_aug = img_aug[ y_start:y_start + y_crop_h, x_start:x_start + x_crop_w]		
-		rows, cols = y_crop_h, x_crop_w
+	height = int(img_aug.shape[0] * scale)
+	width = int(img_aug.shape[1] * scale)		
+	dim = (width, height)
+	img_aug = cv2.resize(img_aug, dim, interpolation = cv2.INTER_AREA)
 	
 	# Mirror image
 	if np.random.randint(0, 2) == 0:
 		img_aug = cv2.flip(img_aug, 1)
 
+	return img_aug
 
-	# Adjust brightness
-	if np.random.randint(0, 2) == 0:
-		level = np.random.randint(-50, 10)
-		fg = img_aug[:,:,0]
-		fg = cv2.add(fg,level)
-		img_aug[:,:,0] = fg
-	# Add background noise
-	#bg = np.random.randint(0, 256, (rows * 2, cols * 2, 1)) 
-	bg = cv2.imread('/content/wild-boar-detector/data/bg.jpg', cv2.IMREAD_UNCHANGED)
+
+
+def augment_generated_training_set(img_data, config):
+	assert 'filepath' in img_data	
+
+	img_data_aug = copy.deepcopy(img_data)
+	
+	bg = cv2.imread('data/bg.jpg', cv2.IMREAD_UNCHANGED)
 	bg = cv2.cvtColor(bg, cv2.COLOR_BGR2GRAY)
 	bg = cv2.medianBlur(bg, 1)
 	bg = np.expand_dims(bg, -1)	
-	pos = (np.random.randint(0, bg.shape[1] - cols), np.random.randint(0, bg.shape[0] - rows))
-	
-	img_aug = overlay_image_alpha(bg, img_aug[:,:,:1], pos, img_aug[:,:,1:2] // 255)
-	
-	
+
+	feeder = load_image('data/feeder.png')
+	tree = load_image('data/tree.png')
+
+	files = img_data_aug['img_files']
+	obj_count = np.random.randint(1, 6)
+	objects = []
+	for obj in range(obj_count):
+		file_path = files[np.random.randint(0, len(files))]		
+		img_orig = load_image(file_path)
+		pos = (
+			np.random.randint(0 - img_orig.shape[1] // 2, bg.shape[1] - img_orig.shape[1] // 2), 
+			np.random.randint(bg.shape[0] // 4, bg.shape[0] - img_orig.shape[0] // 2)
+		)
+		y_min = bg.shape[0] // 4
+		y_max = bg.shape[0] - img_orig.shape[0] // 2
+		scale = ( pos[1] - y_min + 3 * y_max) / (4 * y_max - y_min)		
+		img_aug = augment_image(img_orig, scale)
+		objects.append({
+			'image': img_aug,
+			'pos': pos,
+			'ground': pos[1] + img_aug.shape[0],
+			'object': True
+		})
+
+	objects.append({
+		'image': feeder,
+		'pos': (447, 0),
+		'ground': feeder.shape[0],
+		'object': False
+	})
+	objects.append({
+		'image': tree,
+		'pos': (0, 313),
+		'ground': 313 + tree.shape[0],
+		'object': False
+	})
+	objects = sorted(objects, key=lambda obj: obj['ground'])
 	img_data_aug['height'] = bg.shape[0]
 	img_data_aug['width'] = bg.shape[1]	
-	img_data_aug['bboxes'][0]['x1'] = pos[0]
-	img_data_aug['bboxes'][0]['y1'] = pos[1]
-	img_data_aug['bboxes'][0]['x2'] = pos[0] + cols
-	img_data_aug['bboxes'][0]['y2'] = pos[1] + rows	
-	img_aug = np.repeat(img_aug, 3, 2)	
+	img_data_aug['bboxes'] = []
+	for obj in objects:			
+		img_aug = overlay_image_alpha(bg, obj['image'][:,:,:1], obj['pos'], obj['image'][:,:,1:2] // 255)
+		if obj['object']:
+			bbox = {
+				'x1': obj['pos'][0] if obj['pos'][0] > 0 else 0,
+				'y1': obj['pos'][1] if obj['pos'][1] > 0 else 0,
+				'x2': obj['pos'][0] + obj['image'].shape[1] if obj['pos'][0] + obj['image'].shape[1] < bg.shape[1] else bg.shape[1] - 1,
+				'y2': obj['pos'][1] + obj['image'].shape[0] if obj['pos'][1] + obj['image'].shape[0] < bg.shape[0] else bg.shape[0] - 1
+			}
+			tmp = bbox['x1']
+			if bbox['x1'] > bbox['x2']:
+				bbox['x1'] = bbox['x2']
+				bbox['x2'] = tmp
+			tmp = bbox['y1']
+			if bbox['y1'] > bbox['y2']:
+				bbox['y1'] = bbox['y2']
+				bbox['y2'] = tmp
+			img_data_aug['bboxes'].append(bbox)
+		bg = img_aug
+	
+	img_aug = np.repeat(img_aug, 3, 2)
+	
 	return img_data_aug, img_aug
 
 def augment_validation_set(img_data, config):
@@ -121,24 +154,33 @@ def augment_validation_set(img_data, config):
 	return img_data_aug, img_aug
 
 
-'''c = None
-import glob
-files = glob.glob('C:/git/wild-boar-detector/data/generated_training/*.png')
-i = 0
-while(c != 27):
-	files_path = files[np.random.randint(0,len(files))]
-	img_data = {'filepath':files_path, 'bboxes':[{}] }
-	img_data_aug, img_aug = augment_generated_training_set(img_data, None)
-	print(f'Shape: {img_aug.shape}')
-	#start_point = (img_data_aug['bboxes'][0]['x1'], img_data_aug['bboxes'][0]['y1'])
-	#end_point = (img_data_aug['bboxes'][0]['x2'], img_data_aug['bboxes'][0]['y2'])
-	#img_aug = cv2.rectangle(img_aug,start_point, end_point, 255, 2) 
-	try:
-		cv2.imshow('Window', img_aug)
-		print(img_data_aug)
-		c = cv2.waitKey()	
-	except Exception as e:
-		print(e)
-		pass
-cv2.destroyAllWindows()
-'''
+if __name__ == "__main__":
+	c = None
+	import glob
+	files = glob.glob('data/generated_training/*.png')
+	objects = []
+	i = 0
+	while(c != 27 and i < 2000):
+		files_path = files[np.random.randint(0,len(files))]
+		img_data = {'filepath':files_path, 'bboxes':[{}], 'img_files': files }
+		img_data_aug, img_aug = augment_generated_training_set(img_data, None)
+		img_file_name = f'data/pre_gen/{i}.jpg'
+		#print(f'Shape: {img_aug.shape}')
+		for bbox in img_data_aug['bboxes']:
+			start_point = (bbox['x1'], bbox['y1'])
+			end_point = (bbox['x2'], bbox['y2'])
+			objects.append(f"{img_file_name},{bbox['x1']},{bbox['y1']},{bbox['x2']},{bbox['y2']},Pig")
+			#color = (np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255))
+			#img_aug = cv2.rectangle(img_aug,start_point, end_point, color, 2)
+		try:
+			#cv2.imshow('Window', img_aug)
+			#print(img_data_aug)
+			#c = cv2.waitKey()	
+			cv2.imwrite(img_file_name,img_aug)
+			i += 1
+		except Exception as e:
+			print(e)
+			pass
+	with open('generated.txt','w') as f:
+  		f.write('\n'.join(objects))
+	#cv2.destroyAllWindows()
