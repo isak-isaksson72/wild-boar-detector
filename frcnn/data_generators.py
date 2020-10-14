@@ -282,8 +282,7 @@ def get_anchor_gt(all_img_data, class_count, C, img_length_calc_function, backen
 			np.random.shuffle(all_img_data)
 
 		for img_data in all_img_data:
-			try:
-				img_data['img_files'] = all_img_data
+			try:				
 				if C.balanced_classes and sample_selector.skip_sample_for_balanced_class(img_data):
 					continue
 

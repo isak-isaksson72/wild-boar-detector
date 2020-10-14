@@ -76,8 +76,8 @@ def augment_generated_training_set(img_data, config):
 
 	feeder = load_image('data/feeder.png')
 	tree = load_image('data/tree.png')
-
-	files = [name for name in img_data_aug['img_files'] if 'attack' not in name]
+	files = glob.glob('data/generated_training/*.png')
+	files = [name for name in files if 'attack' not in name]
 	obj_count = np.random.randint(1, 6)
 	objects = []
 	for obj in range(obj_count):
