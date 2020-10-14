@@ -124,7 +124,8 @@ def augment_generated_training_set(img_data, config):
 				bbox['y2'] = tmp
 			img_data_aug['bboxes'].append(bbox)
 		bg = img_aug
-	
+	vinget = load_image('data/vinget.png')
+	img_aug = overlay_image_alpha(img_aug, vinget[:,:,:1], (0,0), vinget[:,:,1:2] // 255)
 	img_aug = np.repeat(img_aug, 3, 2)
 	
 	return img_data_aug, img_aug
