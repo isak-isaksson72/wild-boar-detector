@@ -283,14 +283,14 @@ def get_anchor_gt(all_img_data, class_count, C, img_length_calc_function, backen
 
 		for img_data in all_img_data:
 			try:
-
+				img_data['img_files'] = all_img_data
 				if C.balanced_classes and sample_selector.skip_sample_for_balanced_class(img_data):
 					continue
 
 				# read in image, and optionally add augmentation
 
 				if mode == 'train':
-					img_data_aug, x_img = data_augment.augment_validation_set(img_data, C)
+					img_data_aug, x_img = data_augment.augment_generated_training_set(img_data, C)
 				else:
 					img_data_aug, x_img = data_augment.augment_validation_set(img_data, C)
 

@@ -51,6 +51,15 @@ def augment_image(img_orig, scale):
 	if np.random.randint(0, 2) == 0:
 		img_aug = cv2.flip(img_aug, 1)
 
+	size = 4
+	# generating the kernel
+	kernel_motion_blur = np.zeros((size, size))
+	kernel_motion_blur[int((size-1)/2), :] = np.ones(size)
+	kernel_motion_blur = kernel_motion_blur / size
+
+	# applying the kernel to the input image
+	img_aug = cv2.filter2D(img_aug, -1, kernel_motion_blur)
+
 	return img_aug
 
 
@@ -68,7 +77,7 @@ def augment_generated_training_set(img_data, config):
 	feeder = load_image('data/feeder.png')
 	tree = load_image('data/tree.png')
 
-	files = img_data_aug['img_files']
+	files = [name for name in img_data_aug['img_files'] if 'attack' not in name]
 	obj_count = np.random.randint(1, 6)
 	objects = []
 	for obj in range(obj_count):
@@ -106,7 +115,7 @@ def augment_generated_training_set(img_data, config):
 	img_data_aug['width'] = bg.shape[1]	
 	img_data_aug['bboxes'] = []
 	for obj in objects:			
-		img_aug = overlay_image_alpha(bg, obj['image'][:,:,:1], obj['pos'], obj['image'][:,:,1:2] // 255)
+		img_aug = overlay_image_alpha(bg, obj['image'][:,:,:1], obj['pos'], obj['image'][:,:,1:2] / 255.0)
 		if obj['object']:
 			bbox = {
 				'x1': obj['pos'][0] if obj['pos'][0] > 0 else 0,
@@ -124,8 +133,9 @@ def augment_generated_training_set(img_data, config):
 				bbox['y2'] = tmp
 			img_data_aug['bboxes'].append(bbox)
 		bg = img_aug
-	vinget = load_image('data/vinget.png')
-	img_aug = overlay_image_alpha(img_aug, vinget[:,:,:1], (0,0), vinget[:,:,1:2] // 255)
+	vinget = cv2.imread('data/vinget.png', cv2.IMREAD_UNCHANGED)
+		
+	img_aug = overlay_image_alpha(img_aug, vinget[:,:,:1], (0,0), (np.random.randint(65,80) / 100.0) * vinget[:,:,3:4] / 255.0)
 	img_aug = np.repeat(img_aug, 3, 2)
 	
 	return img_data_aug, img_aug
@@ -171,8 +181,8 @@ if __name__ == "__main__":
 			start_point = (bbox['x1'], bbox['y1'])
 			end_point = (bbox['x2'], bbox['y2'])
 			objects.append(f"{img_file_name},{bbox['x1']},{bbox['y1']},{bbox['x2']},{bbox['y2']},Pig")
-			#color = (np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255))
-			#img_aug = cv2.rectangle(img_aug,start_point, end_point, color, 2)
+			color = (np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255))
+			img_aug = cv2.rectangle(img_aug,start_point, end_point, color, 2)
 		try:
 			cv2.imshow('Window', img_aug)
 			#print(img_data_aug)
