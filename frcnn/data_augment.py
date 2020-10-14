@@ -70,14 +70,14 @@ def augment_generated_training_set(img_data, config):
 
 	img_data_aug = copy.deepcopy(img_data)
 	
-	bg = cv2.imread('wild-boar-detector/data/bg.jpg', cv2.IMREAD_UNCHANGED)
+	bg = cv2.imread('data/bg.jpg', cv2.IMREAD_UNCHANGED)
 	bg = cv2.cvtColor(bg, cv2.COLOR_BGR2GRAY)
 	bg = cv2.medianBlur(bg, 1)
 	bg = np.expand_dims(bg, -1)	
 
-	feeder = load_image('wild-boar-detector/data/feeder.png')
-	tree = load_image('wild-boar-detector/data/tree.png')
-	files = glob.glob('wild-boar-detector/data/generated_training/*.png')
+	feeder = load_image('data/feeder.png')
+	tree = load_image('data/tree.png')
+	files = glob.glob('data/generated_training/*.png')
 	files = [name for name in files if 'attack' not in name]
 	obj_count = np.random.randint(1, 6)
 	objects = []
@@ -134,7 +134,7 @@ def augment_generated_training_set(img_data, config):
 				bbox['y2'] = tmp
 			img_data_aug['bboxes'].append(bbox)
 		bg = img_aug
-	vinget = cv2.imread('wild-boar-detector/data/vinget.png', cv2.IMREAD_UNCHANGED)
+	vinget = cv2.imread('data/vinget.png', cv2.IMREAD_UNCHANGED)
 		
 	img_aug = overlay_image_alpha(img_aug, vinget[:,:,:1], (0,0), (np.random.randint(65,80) / 100.0) * vinget[:,:,3:4] / 255.0)
 	img_aug = np.repeat(img_aug, 3, 2)
@@ -182,12 +182,12 @@ if __name__ == "__main__":
 			start_point = (bbox['x1'], bbox['y1'])
 			end_point = (bbox['x2'], bbox['y2'])
 			objects.append(f"{img_file_name},{bbox['x1']},{bbox['y1']},{bbox['x2']},{bbox['y2']},Pig")
-			color = (np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255))
-			img_aug = cv2.rectangle(img_aug,start_point, end_point, color, 2)
+			#color = (np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255))
+			#img_aug = cv2.rectangle(img_aug,start_point, end_point, color, 2)
 		try:
-			cv2.imshow('Window', img_aug)
+			#cv2.imshow('Window', img_aug)
 			#print(img_data_aug)
-			c = cv2.waitKey()	
+			#c = cv2.waitKey()	
 			cv2.imwrite(img_file_name,img_aug)
 			i += 1
 		except Exception as e:
